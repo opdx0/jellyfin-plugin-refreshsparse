@@ -1,40 +1,37 @@
-name: Build Plugin
+name: Build Plugin 10.11
 
 on:
   push:
-    branches: [ master, main ]
-    paths-ignore:
-      - '**/*.md'
-  pull_request:
-    branches: [ master, main ]
-    paths-ignore:
-      - '**/*.md'
+    branches: [ '**' ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      -
-        name: Setup .NET Core
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.x
-      -
-        name: Build Jellyfin Plugin
-        uses: oddstr13/jellyfin-plugin-repository-manager@v0.5.0
-        id: jprm
+      - name: Build
+        run: dotnet build -c Release
+      - name: Create Bundle
+        run: |
+          mkdir -p ./publish/RefreshSparse
+          find ./Jellyfin.Plugin.RefreshSparse/bin/Release -name "Jellyfin.Plugin.RefreshSparse.dll" -exec cp {} ./publish/RefreshSparse/ \;
+          cat <<EOF > ./publish/RefreshSparse/meta.json
+          {
+            "id": "12b44f20-6cfb-4be5-9950-3d0fbe74fa35",
+            "name": "Refresh Sparse Items",
+            "version": "5.0.0.6",
+            "targetAbi": "10.11.0.0",
+            "status": "Active"
+          }
+          EOF
+      - name: Upload Bundle
+        uses: actions/upload-artifact@v4
         with:
-          dotnet-target: net9.0
-      -
-        name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifact
-          retention-days: 30
-          if-no-files-found: error
-          path: ${{ steps.jprm.outputs.artifact }}
+          name: RefreshSparse-10.11-V5.0.0.6
+          path: ./publish/RefreshSparse/
